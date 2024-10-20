@@ -374,6 +374,7 @@ async function restore(e) {
   await Promise.all(versionPromises);
   if (notMatchVersion) {
     alert('DBのバージョンがバックアップ時から更新されているため、復元できません');
+    toggleLoading(target, false);
     return;
   }
 

@@ -1,3 +1,3 @@
 # Yu
 
-TOKIMEKIをバックアップするよ！
+TOKIMEKIの設定を同期するよ！
