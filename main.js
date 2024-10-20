@@ -2,7 +2,6 @@
 const ACCOUNT_DB_NAME = 'accountDatabase';
 const BOOKMARK_DB_NAME = 'bookmarkDatabase';
 const THEME_DB_NAME = 'themeDatabase';
-const BUTTON_CLASS = 'side-bar-button svelte-oetxd8' // TODO: 使われているボタンから自動取得したい
 
 // chorme.storage.syncに保存する際に利用する定数
 const LOCAL_STORAGE_PREFIX = 'LS_';
@@ -16,7 +15,7 @@ const ICON_CLASS = 'yu-button-icon';
 const LOADING_CLASS = 'yu-loading';
 
 const backupButtonHtml = `
-<button id="Yu-Backup" class="${BUTTON_CLASS}" title="設定をバックアップする">
+<button title="設定をバックアップする">
   <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" class="${ICON_CLASS}" viewBox="-1 -1 18 18" stroke="var(--bar-bottom-icon-color)" stroke-width="0.5" fill="var(--bar-bottom-icon-color)">
     <path fill-rule="evenodd" d="M4.406 1.342A5.53 5.53 0 0 1 8 0c2.69 0 4.923 2 5.166 4.579C14.758 4.804 16 6.137 16 7.773 16 9.569 14.502 11 12.687 11H10a.5.5 0 0 1 0-1h2.688C13.979 10 15 8.988 15 7.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 2.825 10.328 1 8 1a4.53 4.53 0 0 0-2.941 1.1c-.757.652-1.153 1.438-1.153 2.055v.448l-.445.049C2.064 4.805 1 5.952 1 7.318 1 8.785 2.23 10 3.781 10H6a.5.5 0 0 1 0 1H3.781C1.708 11 0 9.366 0 7.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383z"></path>
     <path fill-rule="evenodd" d="M7.646 4.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 5.707V14.5a.5.5 0 0 1-1 0V5.707L5.354 7.854a.5.5 0 1 1-.708-.708l3-3z"></path>
@@ -30,7 +29,7 @@ const backupButtonHtml = `
 `;
 
 const restoreButtonHtml = `
-<button id="Yu-Restore" class="${BUTTON_CLASS}" title="設定をリストアする">
+<button title="設定をリストアする">
   <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="var(--bar-bottom-icon-color)" class="${ICON_CLASS}" viewBox="-1 -1 18 18" stroke="var(--bar-bottom-icon-color)" stroke-width="0.5">
     <path d="M4.406 1.342A5.53 5.53 0 0 1 8 0c2.69 0 4.923 2 5.166 4.579C14.758 4.804 16 6.137 16 7.773 16 9.569 14.502 11 12.687 11H10a.5.5 0 0 1 0-1h2.688C13.979 10 15 8.988 15 7.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 2.825 10.328 1 8 1a4.53 4.53 0 0 0-2.941 1.1c-.757.652-1.153 1.438-1.153 2.055v.448l-.445.049C2.064 4.805 1 5.952 1 7.318 1 8.785 2.23 10 3.781 10H6a.5.5 0 0 1 0 1H3.781C1.708 11 0 9.366 0 7.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383z"></path>
     <path d="M7.646 15.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 14.293V5.5a.5.5 0 0 0-1 0v8.793l-2.146-2.147a.5.5 0 0 0-.708.708l3 3z"></path>
@@ -109,7 +108,8 @@ function importFromJson(idbDatabase, json) {
   return new Promise((resolve, reject) => {
     const transaction = idbDatabase.transaction(
       idbDatabase.objectStoreNames,
-      'readwrite'
+      'readwrite',
+      {durability: 'strict'},
     )
     transaction.addEventListener('error', reject)
 
@@ -141,7 +141,8 @@ function clearDatabase(idbDatabase) {
   return new Promise((resolve, reject) => {
     const transaction = idbDatabase.transaction(
       idbDatabase.objectStoreNames,
-      'readwrite'
+      'readwrite',
+      {durability: 'strict'},
     )
     transaction.addEventListener('error', reject)
 
@@ -380,26 +381,12 @@ async function restore(e) {
 
   // IndexedDBにトランザクションがあると復元できないため、リロードしてTOKIMEKIが読み込まれる前に復元処理を行う
   await chrome.storage.local.set({isRestore: true});
-  location.reload();
+  location.href = location.href;
 }
 
 async function restoreMain() {
   // chrome.storage.syncの内容を取得
   const storage = await chrome.storage.sync.get();
-  
-  // keyの先頭にSTORAGE_PREFIXが付いているものを取得
-  const lsKeys = Object.keys(storage).filter((key) => key.startsWith(LOCAL_STORAGE_PREFIX));
-  // LocalStorageを空にする
-  localStorage.clear();
-  // LocalStorageに復元
-  const lsPromises = lsKeys.map((key) => {
-    return (async () => {
-      const name = key.replace(LOCAL_STORAGE_PREFIX, '');
-      const value = await decompressText(storage[key]);
-      localStorage.setItem(name, value);
-    })();
-  });
-  await Promise.all(lsPromises);
 
   // keyの先頭にDB_PREFIXが付いているものを取得
   const dbKeys = Object.keys(storage).filter((key) => key.startsWith(DB_PREFIX));
@@ -415,10 +402,22 @@ async function restoreMain() {
     })();
   });
   await Promise.all(dbPromises);
+  
+  // keyの先頭にSTORAGE_PREFIXが付いているものを取得
+  const lsKeys = Object.keys(storage).filter((key) => key.startsWith(LOCAL_STORAGE_PREFIX));
+  // LocalStorageを空にする
+  localStorage.clear();
+  // LocalStorageに復元
+  const lsPromises = lsKeys.map((key) => {
+    return (async () => {
+      const name = key.replace(LOCAL_STORAGE_PREFIX, '');
+      const value = await decompressText(storage[key]);
+      localStorage.setItem(name, value);
+    })();
+  });
+  await Promise.all(lsPromises);
 
-  // ページをリロード
-  await chrome.storage.local.set({isRestore: false});
-  location.reload();
+  location.href = location.href;
 }
 
 // サイドバーにボタンを追加する
@@ -428,8 +427,13 @@ window.onload = async () => {
     await sleep(1000);
     sidebarButtons = document.querySelector('.side-bar__list.side-bar__bottom');
   }
+  const sidebarButton = sidebarButtons.querySelector('.side-bar-button.only-pc');
   const backupButton = createElementFromHTML(backupButtonHtml);
   const restoreButton = createElementFromHTML(restoreButtonHtml);
+  Array.from(sidebarButton.classList).forEach((className) => {
+    backupButton.classList.add(className);
+    restoreButton.classList.add(className);
+  });
   toggleLoading(backupButton, false);
   toggleLoading(restoreButton, false);
   backupButton.addEventListener('click', backup);
@@ -439,7 +443,19 @@ window.onload = async () => {
 }
 
 // 復元処理をページ読み込み前に行うか確認する
-document.addEventListener('DOMContentLoaded', async () => {
+async function handler() {
   const storage = await chrome.storage.local.get();
-  if (storage.isRestore) await restoreMain();
-});
+  console.debug(storage);
+  if (storage.isRestore) {
+    const script = document.querySelectorAll('link[rel="modulepreload"]');
+    script.forEach((elem) => elem.remove());
+    await chrome.storage.local.set({isRestore: false});
+    await restoreMain();
+  }
+};
+
+if (document.readyState !== "loading") {
+  handler();
+} else {
+  document.addEventListener("DOMContentLoaded", handler);
+}
