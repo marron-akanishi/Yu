@@ -1,0 +1,16 @@
+{
+    "manifest_version": 3,
+    "name": "Yu",
+    "version": "1.0.0",
+    "description": "TOKIMEKI Backup",
+    "content_scripts": [
+      {
+        "matches": ["https://tokimeki.blue/"],
+        "js": ["main.js"]
+      }
+    ],
+    "permissions": [
+      "storage"
+    ],
+    "host_permissions": ["https://tokimeki.blue/"]
+  }
