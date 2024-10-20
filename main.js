@@ -352,7 +352,10 @@ async function restore(e) {
   const storage = await chrome.storage.sync.get();
   console.debug(storage);
   // uploadedAtの内容を取得して、cofirmで確認
-  if (!confirm(`${storage[UPLOADED_AT_KEY]}にバックアップされた設定を復元します`)) return;
+  if (!confirm(`${storage[UPLOADED_AT_KEY]}にバックアップされた設定を復元します`)) {
+    toggleLoading(target, false);
+    return;
+  }
 
   // IndexedDBのバージョンを取得（3種類）
   // chrome.storage.syncに保存されているDBのバージョンを取得
