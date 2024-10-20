@@ -6,7 +6,8 @@
     "content_scripts": [
       {
         "matches": ["https://tokimeki.blue/"],
-        "js": ["main.js"]
+        "js": ["main.js"],
+        "run_at": "document_start"
       }
     ],
     "permissions": [
